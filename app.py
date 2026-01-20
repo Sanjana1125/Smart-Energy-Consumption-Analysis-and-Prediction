@@ -34,6 +34,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,
 }
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")  # Replace with your API key
 
 # Initialize database
 db = SQLAlchemy(app)
@@ -695,5 +696,6 @@ with app.app_context():
 
 if __name__ == '__main__':
     app.run(debug=True)  
+
 
 
