@@ -1,3 +1,4 @@
+
 # app.py - Enhanced Version with Suggestions & Device Survey
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -15,14 +16,14 @@ import requests
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key")
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///energy_predictor.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # OpenWeatherMap API Key (Get free key from https://openweathermap.org/api)
 WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")  # Replace with your API key
 
-db = SQLAlchemy(app)    
+db = SQLAlchemy(app)
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'csv', 'pdf'}
@@ -716,8 +717,4 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True)    
-
-
-
-
+    app.run(debug=True)  
