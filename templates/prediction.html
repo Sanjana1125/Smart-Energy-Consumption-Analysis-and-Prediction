@@ -1312,23 +1312,34 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         
         // Make prediction
         const response = await fetch('/prediction', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        console.log('Result received:', result);
-        
-        // Show prediction value
-        document.getElementById('predictionValue').textContent = result.prediction;
-        document.getElementById('noResultsMessage').style.display = 'none';
-        document.getElementById('resultsContent').style.display = 'block';
-        
-        // Update comparison
-        document.getElementById('yourUsage').textContent = result.comparison.your_usage + ' kWh';
-        document.getElementById('typicalUsage').textContent = result.comparison.typical_usage + ' kWh';
-        document.getElementById('comparisonStatus').textContent = result.comparison.percentage + '% ' + result.comparison.status + ' average';
-        document.getElementById('comparisonStatus').className = 'stat-value ' + result.comparison.status;
+    method: 'POST',
+    body: formData
+});
+
+const result = await response.json();
+console.log('Result received:', result);
+
+// Check if the response contains an error
+if (result.error || !response.ok) {
+    throw new Error(result.error || 'Server returned an error');
+}
+
+// Now safely access the data
+document.getElementById('progressFill').style.width = '70%';
+document.getElementById('progressText').textContent = 'Processing predictions...';
+
+const result = await response.json();
+console.log('Result received:', result);
+
+// Show prediction value
+document.getElementById('predictionValue').textContent = result.prediction;
+document.getElementById('noResultsMessage').style.display = 'none';
+document.getElementById('resultsContent').style.display = 'block';
+
+// Update comparison
+document.getElementById('yourUsage').textContent = result.comparison.your_usage + ' kwh';
+document.getElementById('typicalUsage').textContent = result.comparison.typical_usage + ' kwh';
+document.getElementById('comparisonStatus').textContent = result.comparison.percentage + '%' + result.comparison.status + ' average';
         
         // Show suggestions
         if (result.suggestions && result.suggestions.length > 0) {
@@ -1574,3 +1585,4 @@ function displayUploadResults(data) {
 </script>
 </script>
 {% endblock %}
+
