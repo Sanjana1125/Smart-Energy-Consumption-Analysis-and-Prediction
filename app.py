@@ -16,13 +16,26 @@ import requests
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY")
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///energy_predictor.db'
+
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url:
+    # Fix for Render PostgreSQL URL format
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Local SQLite
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///energy_predictor.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# OpenWeatherMap API Key (Get free key from https://openweathermap.org/api)
-WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")  # Replace with your API key
-
+# Initialize database
 db = SQLAlchemy(app)
 
 UPLOAD_FOLDER = 'uploads'
@@ -718,3 +731,4 @@ with app.app_context():
 
 if __name__ == '__main__':
     app.run(debug=True)  
+
