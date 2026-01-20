@@ -482,86 +482,50 @@ def prediction():
         return redirect(url_for('login'))
     
     if request.method == 'POST':
-        data = request.form
-        features = prepare_features(data)
-        predicted_value = model.predict(features)
-        
-        # Get device profile
-        device_profile = DeviceProfile.query.filter_by(user_id=session['user_id']).first()
-        
-        # Generate suggestions
-        suggestions, savings = generate_suggestions(features, predicted_value, device_profile)
-        
-        # Calculate comparison
-        comparison = calculate_comparison(
-            predicted_value,
-            features['SquareFootage'],
-            features['Occupancy']
-        )
-        
-        # Save prediction
-        new_prediction = Prediction(
-            user_id=session['user_id'],
-            temperature=features['Temperature'],
-            humidity=features['Humidity'],
-            square_footage=features['SquareFootage'],
-            occupancy=features['Occupancy'],
-            hvac_usage=features['HVACUsage'],
-            lighting_usage=features['LightingUsage'],
-            renewable_energy=features['RenewableEnergy'],
-            predicted_consumption=predicted_value
-        )
-        db.session.add(new_prediction)
-        db.session.commit()
-        
-        return jsonify({
-            'prediction': round(predicted_value, 2),
-            'suggestions': suggestions,
-            'savings_potential': round(savings, 2),
-            'comparison': comparison
-        })
+        try:
+            data = request.form
+            
+            # Prepare features for ML model (UNCHANGED)
+            features_df = prepare_features(data)
+            predicted_value = model.predict(features_df)[0]
+            
+            # Get device counts (for suggestions ONLY)
+            devices = {
+                'tvs': int(data.get('num_tvs', 0)),
+                'acs': int(data.get('num_acs', 0)),
+                'fridges': int(data.get('num_fridges', 0)),
+                'washers': int(data.get('num_washers', 0)),
+                'computers': int(data.get('num_computers', 0)),
+                'heaters': int(data.get('num_heaters', 0))
+            }
+            
+            # Generate personalized suggestions based on devices
+            suggestions = generate_device_suggestions(devices, predicted_value, data)
+            
+            # Save prediction to database
+            new_prediction = Prediction(
+                user_id=session['user_id'],
+                temperature=float(data['temperature']),
+                humidity=float(data['humidity']),
+                square_footage=float(data['square_footage']),
+                occupancy=int(data['occupancy']),
+                hvac_usage=int(data['hvac_usage']),
+                lighting_usage=int(data['lighting_usage']),
+                renewable_energy=float(data['renewable_energy']),
+                predicted_consumption=predicted_value
+            )
+            db.session.add(new_prediction)
+            db.session.commit()
+            
+            return jsonify({
+                'prediction': round(predicted_value, 2),
+                'suggestions': suggestions
+            })
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
     
     return render_template('prediction.html')
-
-@app.route('/device-survey', methods=['GET', 'POST'])
-def device_survey():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    if request.method == 'POST':
-        data = request.form
-        
-        device_profile = DeviceProfile.query.filter_by(user_id=session['user_id']).first()
-        
-        if device_profile:
-            device_profile.tvs = int(data.get('tvs', 0))
-            device_profile.refrigerators = int(data.get('refrigerators', 0))
-            device_profile.washing_machines = int(data.get('washing_machines', 0))
-            device_profile.dryers = int(data.get('dryers', 0))
-            device_profile.computers = int(data.get('computers', 0))
-            device_profile.ac_units = int(data.get('ac_units', 0))
-            device_profile.water_heaters = int(data.get('water_heaters', 0))
-            device_profile.dishwashers = int(data.get('dishwashers', 0))
-            device_profile.updated_at = datetime.utcnow()
-        else:
-            device_profile = DeviceProfile(
-                user_id=session['user_id'],
-                tvs=int(data.get('tvs', 0)),
-                refrigerators=int(data.get('refrigerators', 0)),
-                washing_machines=int(data.get('washing_machines', 0)),
-                dryers=int(data.get('dryers', 0)),
-                computers=int(data.get('computers', 0)),
-                ac_units=int(data.get('ac_units', 0)),
-                water_heaters=int(data.get('water_heaters', 0)),
-                dishwashers=int(data.get('dishwashers', 0))
-            )
-            db.session.add(device_profile)
-        
-        db.session.commit()
-        return redirect(url_for('prediction'))
-    
-    device_profile = DeviceProfile.query.filter_by(user_id=session['user_id']).first()
-    return render_template('device_survey.html', profile=device_profile)
 
 @app.route('/api/weather/<city>')
 def get_weather(city):
@@ -731,4 +695,5 @@ with app.app_context():
 
 if __name__ == '__main__':
     app.run(debug=True)  
+
 
